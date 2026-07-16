@@ -151,7 +151,7 @@
                 </div>
             </a>
             <!-- 卡片 6: FCN資料庫檢索工具 -->
-           <a href="javascript:void(0)" onclick="openFcnDatasearch()" class="glass-card p-8 rounded-3xl flex flex-col justify-between group cursor-pointer">
+           <a href="javascript:void(0)" onclick="openFcnCalculator()" class="glass-card p-8 rounded-3xl flex flex-col justify-between group cursor-pointer">
     <div>
         <div class="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-6 group-hover:scale-110 transition-transform duration-300">
             <i data-lucide="trending-up" class="w-7 h-7"></i>
@@ -345,30 +345,14 @@
             
             // 將 FCN 試算網頁的網址強設定帶入 ?user= 參數
             var fcnUrl = "https://b89tiger009.github.io/FCNcalculatorV2/?user=" + encodeURIComponent(userEmail);
+   
+            // 2. 設定您「資料檢索網頁」的實際網址
+            var fcnUrl = "https://b89tiger009.github.io/FCNdatasearch/index.html?user=" + encodeURIComponent(userEmail);
             
             // 開啟新分頁
             window.open(fcnUrl, "_blank");
-        }
-        
-        function openFcnDatasearch() {
-    var userEmail = "";
-    
-    // 1. 檢查 Firebase 是否有當前登入的使用者
-    if (firebase.auth().currentUser) {
-        userEmail = firebase.auth().currentUser.email; // 取得當前登入者的 Email
-    } else {
-        // 如果沒登入，跳出提示並阻止跳轉
-        alert("請先登入系統！");
-        return; 
-    }
-    
-    // 2. 設定您「資料檢索網頁」的實際網址
-    // 請將下方的網址替換成您實際部署的檢索網頁（例如 GitHub Pages 的路徑）
-    var fcnUrl = "https://b89tiger009.github.io/FCNdatasearch/index.html?user=" + encodeURIComponent(userEmail);
-    
-    // 3. 在新分頁開啟該網頁
-    window.open(fcnUrl, "_blank");
-}
+        }        
+      
     </script>
 
     <script>
