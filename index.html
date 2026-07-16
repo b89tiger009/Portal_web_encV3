@@ -138,7 +138,7 @@
             </a>
             
             <!-- 卡片 5: FCN試算工具 -->
-            <a href="https://b89tiger009.github.io/FCNcalculatorV2/" target="_blank" class="glass-card p-8 rounded-3xl flex flex-col justify-between group">
+            <a href="javascript:void(0)" onclick="openFcnCalculator()" class="glass-card p-8 rounded-3xl flex flex-col justify-between group cursor-pointer">
                 <div>
                     <div class="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-6 group-hover:scale-110 transition-transform duration-300">
                         <i data-lucide="trending-up" class="w-7 h-7"></i>
@@ -150,6 +150,7 @@
                     前往試算 <i data-lucide="arrow-up-right" class="w-4 h-4 ml-1"></i>
                 </div>
             </a>
+
 
             <!-- 卡片 6: 債券投資報酬率 -->
             <a href="https://b89tiger009.github.io/-BondcalculatorV2/" target="_blank" class="glass-card p-8 rounded-3xl flex flex-col justify-between group">
@@ -320,6 +321,23 @@
                 document.getElementById('password').value = "";
             });
         }
+        // 【入口網站端 - FCN 安全傳參開起試算函式】
+        window.openFcnCalculator = function() {
+            var userEmail = "";
+            // 使用 Firebase v10 的 auth 物件取得目前登入使用者 Email
+            if (auth.currentUser) {
+                userEmail = auth.currentUser.email; 
+            } else {
+                userEmail = "guest@example.com";
+            }
+            
+            // 將 FCN 試算網頁的網址強設定帶入 ?user= 參數
+            var fcnUrl = "https://b89tiger009.github.io/FCNcalculatorV2/?user=" + encodeURIComponent(userEmail);
+            
+            // 開啟新分頁
+            window.open(fcnUrl, "_blank");
+        }
+        
     </script>
 
     <script>
