@@ -151,7 +151,7 @@
                 </div>
             </a>
             <!-- 卡片 6: FCN資料庫檢索工具 -->
-           <a href="javascript:void(0)" onclick="openFcnCalculator()" class="glass-card p-8 rounded-3xl flex flex-col justify-between group cursor-pointer">
+           <a href="javascript:void(0)" onclick="openFcnDatasearch()" class="glass-card p-8 rounded-3xl flex flex-col justify-between group cursor-pointer">
     <div>
         <div class="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-6 group-hover:scale-110 transition-transform duration-300">
             <i data-lucide="trending-up" class="w-7 h-7"></i>
@@ -345,14 +345,26 @@
             
             // 將 FCN 試算網頁的網址強設定帶入 ?user= 參數
             var fcnUrl = "https://b89tiger009.github.io/FCNcalculatorV2/?user=" + encodeURIComponent(userEmail);
-   
-            // 2. 設定您「資料檢索網頁」的實際網址
-            var fcnUrl = "https://b89tiger009.github.io/FCNdatasearch/index.html?user=" + encodeURIComponent(userEmail);
             
             // 開啟新分頁
             window.open(fcnUrl, "_blank");
         }        
-      
+        // 【入口網站端 - FCN 安全傳參開起試算函式】
+        window.openFcnDatasearch = function() {
+            var userEmail = "";
+            // 使用 Firebase v10 的 auth 物件取得目前登入使用者 Email
+            if (auth.currentUser) {
+                userEmail = auth.currentUser.email; 
+            } else {
+                userEmail = "guest@example.com";
+            }
+   
+            // 將 FCN 資料檢索網頁的網址強設定帶入 ?user= 參數
+            var fcnUrl = "https://b89tiger009.github.io/FCNdatasearch/index.html?user=" + encodeURIComponent(userEmail);
+            
+            // 開啟新分頁
+            window.open(fcnUrl, "_blank");
+        }            
     </script>
 
     <script>
