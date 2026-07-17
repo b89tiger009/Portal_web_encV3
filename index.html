@@ -3,372 +3,875 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>個人理財試算工具展值中心</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <title>FCN「不成交只領息」自訂客製化試算工具</title>
+    <script>
+        // 【安全防護】嚴格檢查 HTTP 來源網頁 (Referrer) 驗證機制
+        var allowedReferrer = "https://b89tiger009.github.io/Portal_web_encV3/";
+        (function() {
+            var currentReferrer = document.referrer;
+            if (!currentReferrer || currentReferrer.indexOf(allowedReferrer) !== 0) {
+                alert("錯誤：未授權的存取來源！本網頁僅允許從指定門戶網站開啟。\n\nUnauthorized Access.");
+                window.location.href = allowedReferrer;
+                throw new Error("Access Denied: Invalid Referrer Source.");
+            }
+        })();
+
+        var currentUserEmail = "未知名使用者(直接開啟)";
+        function getFirebaseUser() {
+            var urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('user') && urlParams.get('user').trim() !== "") {
+                currentUserEmail = urlParams.get('user').trim();
+            } else if (window.opener && window.opener.firebaseCurrentUser) {
+                currentUserEmail = window.opener.firebaseCurrentUser.email || window.opener.firebaseCurrentUser.uid;
+            }
+            console.log("目前操作的 Firebase 使用者為:", currentUserEmail);
+        }
+    </script>
     <style>
         body {
-            background: radial-gradient(circle at 50% 50%, #1a1f3c 0%, #0b0d19 100%);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
+            background-color: #f4f7f6;
+            color: #333333;
+            margin: 0;
+            padding: 20px;
         }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        .container {
+            max-width: 1150px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            padding: 35px;
         }
-        .glass-card:hover {
-            transform: translateY(-6px);
-            background: rgba(255, 255, 255, 0.06);
-            border-color: rgba(255, 255, 255, 0.18);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        h1 {
+            color: #0f4c81;
+            text-align: center;
+            margin-bottom: 5px;
+            font-size: 26px;
         }
-        .hidden-content { display: none; }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 15px;
+        }
+        
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        label {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+        input, select {
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 15px;
+            box-sizing: border-box;
+            background-color: #fff;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #1d72b8;
+            box-shadow: 0 0 0 3px rgba(29,114,184,0.1);
+        }
+        .checkbox-label {
+            display: inline-flex;
+            align-items: center;
+            font-size: 12px;
+            color: #4a5568;
+            cursor: pointer;
+            margin-left: 10px;
+            font-weight: normal;
+        }
+        .checkbox-label input {
+            margin-right: 4px;
+            width: 15px;
+            height: 15px;
+        }
+        .error-text {
+            color: #e53e3e;
+            font-size: 12px;
+            margin-top: 5px;
+            display: none;
+            font-weight: bold;
+        }
+
+        /* 逐月遞減設定區樣式 */
+        .step-down-container {
+            grid-column: span 2;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            display: none;
+            margin-top: -10px;
+            margin-bottom: 15px;
+        }
+        .step-down-title {
+            font-size: 13px;
+            font-weight: bold;
+            color: #0f4c81;
+            margin-bottom: 10px;
+        }
+        .step-down-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+        }
+        .step-field {
+            display: flex;
+            flex-direction: column;
+            font-size: 12px;
+        }
+        .step-field input {
+            padding: 6px;
+            font-size: 13px;
+            text-align: center;
+            margin-top: 4px;
+        }
+
+        .ticker-section-title {
+            font-weight: bold;
+            color: #0f4c81;
+            margin: 25px 0 12px 0;
+            font-size: 16px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 5px;
+        }
+        .tickers-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+        .ticker-card {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        .ticker-input {
+            width: 100%;
+            padding: 8px;
+            font-size: 14px;
+            text-align: center;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        .ref-price-input {
+            width: 100%;
+            padding: 6px;
+            font-size: 12px;
+            text-align: center;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            margin-bottom: 5px;
+        }
+        .ticker-info {
+            margin-top: 4px;
+            font-size: 11px;
+            color: #64748b;
+            line-height: 1.45;
+            text-align: left;
+            background: #fff;
+            padding: 6px;
+            border-radius: 4px;
+            border: 1px dashed #cbd5e1;
+            min-height: 115px;
+        }
+
+        /* ─── V18.0 SVG 完美無縫串接流程圖 ─── */
+        .flow-diagram-container {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 30px 20px;
+            margin: 25px 0;
+            overflow-x: auto;
+        }
+        .flow-timeline-wrapper {
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            min-width: 1080px;
+            padding-top: 10px;
+            padding-bottom: 30px;
+        }
+        /* 時間軸主黑線（向右無限延伸直接對接 SVG 畫布） */
+        .flow-main-axis {
+            position: absolute;
+            top: 245px;
+            left: 1%;
+            width: 825px;
+            height: 4px;
+            background-color: #000000;
+            z-index: 1;
+        }
+        .flow-lead-line {
+            position: absolute;
+            top: 185px;
+            height: 60px;
+            width: 2px;
+            background-color: #000000;
+            z-index: 1;
+        }
+        .flow-axis-dot {
+            position: absolute;
+            top: 241px;
+            width: 12px;
+            height: 12px;
+            background-color: #000000;
+            border-radius: 50%;
+            transform: translateX(-5px);
+            z-index: 2;
+        }
+
+        .simple-flow-box {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 16px;
+            font-size: 13px;
+            line-height: 1.6;
+            width: 195px;
+            min-height: 175px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+            box-sizing: border-box;
+            z-index: 2;
+            text-align: center;
+        }
+        .simple-flow-box .box-header {
+            font-size: 14px;
+            font-weight: 500;
+            color: #444444;
+            margin-bottom: 12px;
+            display: block;
+        }
+        
+        .box-start { border: 2px solid #4caf50; text-align: left !important; margin-right: 12px; }
+        .box-month1 { border: 2px solid #2196f3; margin-right: 12px; }
+        .box-ko { border: 2px solid #ff9800; margin-right: 12px; }
+        .box-end { border: 2px solid #000000; margin-right: 12px; }
+
+        /* SVG 容器：無縫咬合主幹線與成果字卡 */
+        .flow-svg-arrow-container {
+            width: 55px;
+            height: 220px;
+            position: relative;
+            z-index: 2;
+            margin-top: 10px;
+            margin-left: -5px; /* 向左微調，完美咬合主線 */
+            flex-shrink: 0;
+        }
+        .flow-svg-arrow-container svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .flow-right-outcomes-wrapper {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 220px;
+            min-width: 225px;
+            z-index: 2;
+            margin-top: 10px;
+            flex-shrink: 0;
+        }
+
+        .outcome-card {
+            background-color: #ffffff;
+            border-radius: 12px;
+            padding: 14px;
+            font-size: 12px;
+            color: #333333;
+            width: 225px;
+            line-height: 1.6;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            box-sizing: border-box;
+        }
+        .outcome-card .card-head {
+            font-weight: bold;
+            font-size: 14px;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .outcome-card hr {
+            border: none;
+            border-top: 1px dashed #cbd5e1;
+            margin: 8px 0;
+        }
+        
+        .border-green-outcome { border: 2px solid #4caf50; }
+        .border-orange-outcome { border: 2px solid #ff9800; }
+
+        .red-text-style { color: #e53e3e; font-weight: bold; font-size: 15px; }
+        .blue-text-style { color: #e53e3e; font-weight: bold; font-size: 15px; }
+
+        .ko-bottom-desc-area {
+            margin-top: 35px;
+            text-align: center;
+            min-width: 950px;
+            border-top: 1px dashed #e2e8f0;
+            padding-top: 20px;
+        }
+        .ko-desc-title {
+            color: #e53e3e;
+            font-weight: bold;
+            font-size: 15px;
+            margin-bottom: 12px;
+        }
+        .ko-desc-item {
+            font-size: 13px;
+            margin: 8px 0;
+            color: #333333;
+        }
+        .ko-desc-item span { font-weight: bold; }
+
+        .cloud-save-area { text-align: center; margin: 30px 0; }
+        .btn-save {
+            background-color: #0f4c81;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: bold;
+            padding: 14px 35px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(15,76,129,0.25);
+            transition: all 0.2s;
+        }
+        .btn-save:hover { background-color: #125999; transform: translateY(-1px); }
+        
+        .result-section { margin-top: 15px; border-top: 2px dashed #cbd5e1; padding-top: 25px; }
+        .section-title { font-size: 18px; font-weight: bold; color: #0f4c81; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px 15px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .stat-label { font-size: 13px; color: #64748b; margin-bottom: 8px; }
+        .stat-value { font-size: 22px; font-weight: bold; color: #0f4c81; }
+        .stat-value.green { color: #10b981; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; background: #fff; }
+        th, td { padding: 14px 12px; text-align: center; border-bottom: 1px solid #edf2f7; }
+        th { background-color: #0f4c81; color: white; font-weight: bold; }
+        .disclaimer { font-size: 12px; color: #94a3b8; margin-top: 35px; line-height: 1.6; border-top: 1px solid #e2e8f0; padding-top: 20px; }
     </style>
 </head>
-<body class="text-slate-200 min-h-screen flex flex-col justify-between antialiased">
+<body>
 
-    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[350px] bg-blue-500/10 blur-[120px] pointer-events-none rounded-full"></div>
+<div class="container">
+    <h1>FCN「不成交只領息」自訂客製化試算工具</h1>
+    <div class="subtitle">升級 V18.0：新增出場價逐月遞減模組與 SVG 樹狀向量雙頭端箭頭無縫串接技術</div>
 
-    <main class="container mx-auto px-6 py-16 flex-grow flex flex-col justify-center max-w-6xl relative z-10">
+    <!-- 參數輸入區 -->
+    <div class="input-grid">
+        <div class="form-group">
+            <label for="customer-name">客戶名稱</label>
+            <input type="text" id="customer-name" value="王大同 經理" placeholder="請輸入客戶姓名" oninput="runAllCalculations()">
+        </div>
+        <div class="form-group">
+            <label for="investment">投資本金 (台幣元)</label>
+            <input type="number" id="investment" value="2000000" min="0" step="50000" oninput="runAllCalculations()">
+            <div id="err-investment" class="error-text">❌ 投資本金不可小於 0</div>
+        </div>
+
+        <div class="form-group">
+            <label for="coupon-rate">年化票息 (%)</label>
+            <input type="number" id="coupon-rate" value="20" min="0" max="100" step="0.5" oninput="runAllCalculations()">
+            <div id="err-coupon" class="error-text">❌ 年化票息範圍必須介於 0 至 100 之間</div>
+        </div>
+        <div class="form-group">
+            <label for="start-date">進場時間 (西元時間選項)</label>
+            <input type="date" id="start-date" value="2026-06-28" onchange="runAllCalculations()">
+        </div>
+
+        <div class="form-group">
+            <label for="period">投資期滿時間 (月)</label>
+            <select id="period" onchange="toggleStepDownPanel(); runAllCalculations();">
+                <option value="1">1 個月</option>
+                <option value="2">2 個月</option>
+                <option value="3">3 個月</option>
+                <option value="4">4 個月</option>
+                <option value="5">5 個月</option>
+                <option value="6" selected>6 個月</option>
+                <option value="7">7 個月</option>
+                <option value="8">8 個月</option>
+                <option value="9">9 個月</option>
+                <option value="10">10 個月</option>
+                <option value="11">11 個月</option>
+                <option value="12">12 個月</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="strike-pct">執行價 (%)</label>
+            <input type="number" id="strike-pct" value="65" min="0" max="100" step="1" oninput="runAllCalculations()">
+            <div id="err-strike" class="error-text">❌ 執行價範圍必須介於 0 至 100 之間</div>
+        </div>
+
+        <div class="form-group">
+            <label for="knockin-pct">下限價 (%)</label>
+            <input type="number" id="knockin-pct" value="60" min="0" max="100" step="1" oninput="runAllCalculations()">
+            <div id="err-knockin" class="error-text">❌ 下限價範圍必須介於 0 至 100 之間</div>
+        </div>
+        <div class="form-group">
+            <label for="trigger-out-pct">
+                出場價 (%) 
+                <label class="checkbox-label">
+                    <input type="checkbox" id="enable-step-down" onchange="toggleStepDownPanel(); runAllCalculations();"> 手動設定逐月遞減 %
+                </label>
+            </label>
+            <input type="number" id="trigger-out-pct" value="90" min="0" max="150" step="1" oninput="runAllCalculations(); autoFillStepDown();">
+            <div id="err-trigger-out" class="error-text">❌ 出場價範圍必須介於 0 至 150 之間</div>
+        </div>
+
+        <!-- 💰 1. 新增功能：手動設定逐月遞減控制面板 💰 -->
+        <div id="step-down-panel" class="step-down-container">
+            <div class="step-down-title">📊 請手動設定第 2 個月至滿期各月份的出場價觀察比例 (%)：</div>
+            <div id="step-down-fields-grid" class="step-down-grid">
+                <!-- 欄位由 JavaScript 依選擇月份動態鋪設 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 連結標的設定區 -->
+    <div class="ticker-section-title">🔍 連結標的設定 (請輸入股票簡稱與手動填寫參考價)</div>
+    <div class="tickers-grid">
+        <div class="ticker-card">
+            <div class="ticker-label">標的 1</div>
+            <input type="text" id="t1" class="ticker-input" value="NVDA" oninput="updateTickerInfo(1)">
+            <input type="number" id="t1-ref" class="ref-price-input" value="192.53" oninput="runAllCalculations()">
+            <div id="t1-info" class="ticker-info"></div>
+        </div>
+        <div class="ticker-card">
+            <div class="ticker-label">標的 2</div>
+            <input type="text" id="t2" class="ticker-input" value="TSM" oninput="updateTickerInfo(2)">
+            <input type="number" id="t2-ref" class="ref-price-input" value="172.10" oninput="runAllCalculations()">
+            <div id="t2-info" class="ticker-info"></div>
+        </div>
+        <div class="ticker-card">
+            <div class="ticker-label">標的 3</div>
+            <input type="text" id="t3" class="ticker-input" value="AMD" oninput="updateTickerInfo(3)">
+            <input type="number" id="t3-ref" class="ref-price-input" value="521.58" oninput="runAllCalculations()">
+            <div id="t3-info" class="ticker-info"></div>
+        </div>
+        <div class="ticker-card">
+            <div class="ticker-label">標的 4</div>
+            <input type="text" id="t4" class="ticker-input" value="AAPL" oninput="updateTickerInfo(4)">
+            <input type="number" id="t4-ref" class="ref-price-input" value="214.30" oninput="runAllCalculations()">
+            <div id="t4-info" class="ticker-info"></div>
+        </div>
+        <div class="ticker-card">
+            <div class="ticker-label">標的 5</div>
+            <input type="text" id="t5" class="ticker-input" value="MSFT" oninput="updateTickerInfo(5)">
+            <input type="number" id="t5-ref" class="ref-price-input" value="448.20" oninput="runAllCalculations()">
+            <div id="t5-info" class="ticker-info"></div>
+        </div>
+    </div>
+
+    <!-- ─── 2. 修正：SVG 樹狀向量雙端黑箭頭無縫串接時序流程圖 ─── -->
+    <div class="ticker-section-title">📊 FCN 產品架構與存續條件動態時序圖 (SVG 無縫向量連線版)</div>
+    <div class="flow-diagram-container">
+        <div class="flow-timeline-wrapper">
+            <div class="flow-main-axis"></div>
+            
+            <div class="simple-flow-box box-start">
+                <span class="box-header" id="diag-start-title">進場時間：2026-06-28</span>
+                <div style="text-align:center; margin-bottom: 8px;">
+                    <span class="red-text-style" id="diag-val-principal">NT$ 2,000,000</span>
+                </div>
+                <div id="diag-val-ref-list" style="font-size: 11px; color: #555; line-height:1.4;"></div>
+            </div>
+            <div class="flow-lead-line" style="left: 105px;"></div>
+            <div class="flow-axis-dot" style="left: 105px;"></div>
+
+            <div class="simple-flow-box box-month1">
+                <span class="box-header" style="font-size:15px; color:#111; margin-top:10px;">第一個月<br>保證領息</span>
+                <div style="text-align:center; margin-top:20px;">
+                    <span class="blue-text-style" id="diag-val-interest">NT$ 33,333</span>
+                </div>
+            </div>
+            <div class="flow-lead-line" style="left: 312px;"></div>
+            <div class="flow-axis-dot" style="left: 312px;"></div>
+
+            <div class="simple-flow-box box-ko">
+                <span class="box-header" style="font-size:16px; color:#e65100; margin-top:10px;">提前出場機制</span>
+                <div style="font-size:12px; color:#444; text-align:center; padding-top:15px;">
+                    第二個月開始的<br>每個觀察日<br>會進行比價
+                </div>
+            </div>
+            <div class="flow-lead-line" style="left: 519px;"></div>
+            <div class="flow-axis-dot" style="left: 519px;"></div>
+
+            <div class="simple-flow-box box-end">
+                <span class="box-header" id="diag-end-title" style="margin-top:15px;">期滿時間：2026-12-28</span>
+                <div style="font-size:13px; color:#222; text-align:center; padding-top:20px;">
+                    有兩種可能性
+                </div>
+            </div>
+            <div class="flow-lead-line" style="left: 726px;"></div>
+            <div class="flow-axis-dot" style="left: 726px;"></div>
+
+            <!-- 🛠️ 核心對齊演算法：橫軸完全銜接主黑線，右側雙分流補齊兩對黑色箭頭 🛠 -->
+            <div class="flow-svg-arrow-container">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 220" preserveAspectRatio="none">
+        <defs>
+            <marker id="svg-arrow-head-small" markerWidth="5.25" markerHeight="5.25" refX="5.25" refY="2.625" orient="auto">
+                <path d="M0,0 L5.25,2.625 L0,5.25 Z" fill="#000000" />
+            </marker>
+        </defs>
         
-        <!-- 頁首標題 -->
-        <header class="text-center mb-12">
-            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium mb-4 tracking-wider uppercase">
-                <i data-lucide="shield-check" class="w-4 h-4"></i> Secure Access Control
+        <!-- 上方分支路徑 (修改後：移除了從 0 到 16 的水平段) -->
+        <!-- 原：d="M 0,110 L 16,110 L 16,42 L 40,42" -->
+        <path d="M 16,110 L 16,42 L 40,42" 
+              fill="none" stroke="#000000" stroke-width="4" stroke-linejoin="miter"
+              marker-end="url(#svg-arrow-head-small)" />
+        
+        <!-- 下方分支路徑 (修改後：起點不變，但確認與上方對齊) -->
+        <!-- 原：d="M 16,110 L 16,178 L 40,178" (這條不需要修改) -->
+        <path d="M 16,110 L 16,178 L 40,178" 
+              fill="none" stroke="#000000" stroke-width="4" stroke-linejoin="miter"
+              marker-end="url(#svg-arrow-head-small)" />
+    </svg>
             </div>
-            <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-200 to-slate-400 mb-4">
-                理財試算工具平台
-            </h1>
-            <p id="welcome-msg" class="text-slate-400 text-lg max-w-2xl mx-auto font-light">
-                本平台僅限授權使用者存取，請輸入帳號密碼以解鎖工具。
-            </p>
-        </header>
 
-        <!-- 登入區塊 -->
-        <div id="login-section" class="max-w-md mx-auto w-full glass-card p-8 rounded-3xl text-center mb-12">
-            <div class="w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mx-auto mb-4">
-                <i data-lucide="lock" class="w-6 h-6"></i>
+            <!-- 右端單色外框字卡區 -->
+            <div class="flow-right-outcomes-wrapper">
+                <div class="outcome-card border-green-outcome">
+                    <span class="card-head" style="color:#2e7d32;">可能成果1</span>
+                    到期日當天市價 &gt; 執行價
+                    <hr>
+                    返還本金 + 當月配息
+                </div>
+                
+                <div class="outcome-card border-orange-outcome">
+                    <span class="card-head" style="color:#e65100;">可能成果2</span>
+                    到期日當天市價 &lt; 執行價
+                    <hr>
+                    以執行價買入股票
+                </div>
             </div>
-            <h2 class="text-xl font-bold text-white mb-2">身分認證</h2>
-            <p class="text-sm text-slate-400 mb-6">請輸入管理者配發的帳號與密碼</p>
-            
-            <div class="space-y-4">
-                <div>
-                    <input type="email" id="email" placeholder="使用者帳號 (Email)" 
-                           class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors text-sm">
-                </div>
-                <div>
-                    <input type="password" id="password" placeholder="密碼" 
-                           class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors text-sm">
-                </div>
-                <button onclick="handleLogin()" id="btn-submit"
-                        class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium py-3 rounded-xl transition-all shadow-lg shadow-blue-600/20 text-sm flex items-center justify-center gap-2 cursor-pointer">
-                    登入系統 <i data-lucide="log-in" class="w-4 h-4"></i>
-                </button>
+        </div>
+
+        <div class="ko-bottom-desc-area">
+            <div class="ko-desc-title">提前出場機制有 2 種：</div>
+            <div class="ko-desc-item">① 觀察日當天市價<span>同時高於</span>參考價 ➔ <span style="color:#2e7d32;">返還本金 + 當月配息</span></div>
+            <div class="ko-desc-item">② 觀察日當天若<span>只有其中一市價</span>高於參考價 ➔ <span style="color:#0f4c81;">繼續領配息，等待下一個觀察日</span></div>
+        </div>
+    </div>
+
+    <!-- 試算結果摘要 -->
+    <div class="result-section">
+        <div class="section-title">💰 試算結果摘要</div>
+        <div class="grid-3">
+            <div class="stat-card">
+                <div class="stat-label">每月預估發放利息</div>
+                <div class="stat-value green" id="out-monthly-interest">NT$ 0</div>
             </div>
-            <p id="status-msg" class="text-xs mt-4 text-slate-400 min-h-[16px]"></p>
+            <div class="stat-card">
+                <div class="stat-label">期滿累積總收益</div>
+                <div class="stat-value" id="out-total-interest">NT$ 0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">期滿退回本金</div>
+                <div class="stat-value" id="out-return-principal">NT$ 0</div>
+            </div>
         </div>
 
-        <!-- 登出按鈕 -->
-        <div id="logout-section" class="hidden-content text-center mb-8">
-            <button onclick="handleLogout()" class="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-slate-400 hover:bg-white/10 hover:text-white transition-all cursor-pointer inline-flex items-center gap-1.5">
-                <i data-lucide="log-out" class="w-3.5 h-3.5"></i> 登出帳號
-            </button>
-        </div>
+        <div class="section-title">📊 月度利息發放預估明細</div>
+        <table id="breakdown-table">
+            <thead>
+                <tr>
+                    <th>已領月份</th>
+                    <th>預估發放利息 (台幣)</th>
+                    <th>累積領息 (台幣)</th>
+                    <th style="width: 45%; text-align: left; padding-left: 20px;">發放條件 / 出場比率說明</th>
+                </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+    </div>
 
-        <!-- 工具卡片區塊 (11 個工具) -->
-        <div id="tools-section" class="hidden-content grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+    <div class="cloud-save-area">
+        <button class="btn-save" onclick="saveDirectToSpreadsheet()">💾 將本頁設定與使用者資訊儲存至試算表</button>
+    </div>
+</div>
+
+<script>
+    const FINNHUB_TOKEN = "d8vv9c1r01qp5hrm64fgd8vv9c1r01qp5hrm64g0";
+
+    // 💡 控制手動逐月遞減面板展開與重新渲染
+    function toggleStepDownPanel() {
+        const isChecked = document.getElementById('enable-step-down').checked;
+        const panel = document.getElementById('step-down-panel');
+        const months = parseInt(document.getElementById('period').value) || 1;
+        const grid = document.getElementById('step-down-fields-grid');
+        
+        if (isChecked && months > 1) {
+            panel.style.display = 'block';
+            grid.innerHTML = '';
+            const defaultBase = parseFloat(document.getElementById('trigger-out-pct').value) || 90;
             
-            <!-- 卡片 1: Coast FIRE 財務規劃分析 (新) -->
-            <a href="https://b89tiger009.github.io/CoastFIRE/" target="_blank" class="glass-card p-8 rounded-3xl flex flex-col justify-between group">
-                <div>
-                    <div class="w-14 h-14 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 mb-6 group-hover:scale-110 transition-transform duration-300">
-                        <i data-lucide="palmtree" class="w-7 h-7"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-white mb-3 group-hover:text-sky-400 transition-colors">Coast FIRE 財務規劃分析</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed font-light">計算您的海岸 FIRE 里程碑。評估何時能存夠退休金底本，讓資產靠時間自然複利滾動，提早享受輕工作人生。</p>
-                </div>
-                <div class="mt-8 flex items-center text-xs font-semibold text-sky-400 tracking-wider uppercase group-hover:translate-x-1 transition-transform">
-                    開始規劃 <i data-lucide="arrow-up-right" class="w-4 h-4 ml-1"></i>
-                </div>
-            </a>
+            // 鋪設從第 2 個月到滿期月的輸入框
+            for (let i = 2; i <= months; i++) {
+                const div = document.createElement('div');
+                div.className = 'step-field';
+                // 預設採逐月微幅遞減 1% 作為初始參考值
+                const calculatedVal = Math.max(0, defaultBase - (i - 2));
+                div.innerHTML = `
+                    <label>第 ${i} 個月 (%)</label>
+                    <input type="number" id="step-pct-${i}" value="${calculatedVal}" min="0" max="150" oninput="runAllCalculations()">
+                `;
+                grid.appendChild(div);
+            }
+        } else {
+            panel.style.display = 'none';
+        }
+    }
 
-            <!-- 卡片 2: 台股投資組合歷史回測 -->
-            <a href="https://b89tiger009.github.io/TWStock_Backtesting_Calculator/" target="_blank" class="glass-card p-8 rounded-3xl flex flex-col justify-between group">
-                <div>
-                    <div class="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-6 group-hover:scale-110 transition-transform duration-300">
-                        <i data-lucide="history" class="w-7 h-7"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-white mb-3 group-hover:text-indigo-400 transition-colors">台股投資組合歷史回測計算器</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed font-light">輸入台股標的與權重，穿越時空模擬歷史績效，精準計算最大回撤與夏普值。</p>
-                </div>
-                <div class="mt-8 flex items-center text-xs font-semibold text-indigo-400 tracking-wider uppercase group-hover:translate-x-1 transition-transform">
-                    開始回測 <i data-lucide="arrow-up-right" class="w-4 h-4 ml-1"></i>
-                </div>
-            </a>
+    // 當使用者修改全域出場價時，如果勾選了遞減，自動聯動刷新下方階梯預設值
+    function autoFillStepDown() {
+        const isChecked = document.getElementById('enable-step-down').checked;
+        if (!isChecked) return;
+        const months = parseInt(document.getElementById('period').value) || 1;
+        const defaultBase = parseFloat(document.getElementById('trigger-out-pct').value) || 90;
+        for (let i = 2; i <= months; i++) {
+            const el = document.getElementById(`step-pct-${i}`);
+            if (el) el.value = Math.max(0, defaultBase - (i - 2));
+        }
+    }
 
-            <!-- 卡片 3: 月配息變額年金保險 -->
-            <a href="https://b89tiger009.github.io/Investment-va_calculator/" target="_blank" class="glass-card p-8 rounded-3xl flex flex-col justify-between group">
-                <div>
-                    <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-6 group-hover:scale-110 transition-transform duration-300">
-                        <i data-lucide="coins" class="w-7 h-7"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-white mb-3 group-hover:text-emerald-400 transition-colors">月配息變額年金保險試算</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed font-light">針對月配息變額年金進行精確現金流模擬。</p>
-                </div>
-                <div class="mt-8 flex items-center text-xs font-semibold text-emerald-400 tracking-wider uppercase group-hover:translate-x-1 transition-transform">
-                    前往試算 <i data-lucide="arrow-up-right" class="w-4 h-4 ml-1"></i>
-                </div>
-            </a>
+    // 獲取任意指定月份所對應的出場價百分比 (智慧相容全域型或階梯型)
+    function getStrikeOutPctForMonth(targetMonth) {
+        const isChecked = document.getElementById('enable-step-down').checked;
+        if (targetMonth === 1) {
+            return parseFloat(document.getElementById('trigger-out-pct').value) || 90;
+        }
+        if (isChecked) {
+            const mEl = document.getElementById(`step-pct-${targetMonth}`);
+            if (mEl) return parseFloat(mEl.value) || 0;
+        }
+        return parseFloat(document.getElementById('trigger-out-pct').value) || 90;
+    }
+
+    async function updateTickerInfo(id) {
+        const inputEl = document.getElementById('t' + id);
+        let symbol = inputEl.value.trim().toUpperCase();
+        if (symbol === '') return;
+
+        try {
+            let response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_TOKEN}`);
+            if (!response.ok) throw new Error("API Error");
+            let data = await response.json();
+            if (data.c && data.c !== 0) {
+                inputEl.setAttribute('data-live-price', data.c);
+            }
+        } catch (e) {
+            inputEl.setAttribute('data-live-price', 'N/A');
+        }
+        renderTickerCardsOnly(id);
+        syncDiagramReferences();
+    }
+
+    function renderTickerCardsOnly(id) {
+        const inputEl = document.getElementById('t' + id);
+        const refInput = document.getElementById('t' + id + '-ref');
+        const infoBox = document.getElementById('t' + id + '-info');
+        
+        const strikePct = parseFloat(document.getElementById('strike-pct').value) || 0;
+        const knockinPct = parseFloat(document.getElementById('knockin-pct').value) || 0;
+        // 預設以第 1 個月的出場比率渲染卡片基本值
+        const currentTriggerOutPct = getStrikeOutPctForMonth(1);
+        
+        let symbol = inputEl.value.trim().toUpperCase();
+        let refPrice = parseFloat(refInput.value) || 0;
+        let livePriceAttr = inputEl.getAttribute('data-live-price') || "查價中...";
+
+        let livePriceStr = (isNaN(livePriceAttr) || livePriceAttr === 'N/A') ? "N/A" : "$" + parseFloat(livePriceAttr).toFixed(2);
+        let calcStrike = refPrice * (strikePct / 100);
+        let calcKnockIn = refPrice * (knockinPct / 100);
+        let calcTriggerOut = refPrice * (currentTriggerOutPct / 100);
+
+        infoBox.innerHTML = `
+            <strong>即時市價:</strong> <span style="color:#10b981; font-weight:bold;">${livePriceStr}</span><br>
+            <strong>參考價(手動):</strong> $${refPrice.toFixed(2)}<br>
+            <strong>執行價:</strong> <span style="color:#d97706; font-weight:bold;">$${calcStrike.toFixed(2)}</span><br>
+            <strong>下限價:</strong> <span style="color:#dc2626; font-weight:bold;">$${calcKnockIn.toFixed(2)}</span><br>
+            <strong>出場價(首月):</strong> <span style="color:#2563eb; font-weight:bold;">$${calcTriggerOut.toFixed(2)}</span>
+        `;
+    }
+
+    function syncDiagramReferences() {
+        let refListHtml = "";
+        for (let id = 1; id <= 5; id++) {
+            let symbol = document.getElementById('t' + id).value.trim().toUpperCase();
+            let refPrice = parseFloat(document.getElementById('t' + id + '-ref').value) || 0;
+            if (symbol !== '') {
+                refListHtml += `• ${symbol} 參考價: $${refPrice.toFixed(2)}<br>`;
+            }
+        }
+        document.getElementById('diag-val-ref-list').innerHTML = refListHtml || "未設定標的";
+    }
+
+    function calculateFutureMonthStr(baseDateStr, addedMonths) {
+        if (!baseDateStr) return "";
+        let dateObj = new Date(baseDateStr);
+        if (isNaN(dateObj.getTime())) return "";
+        dateObj.setMonth(dateObj.getMonth() + addedMonths);
+        let yyyy = dateObj.getFullYear();
+        let mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+        let dd = String(dateObj.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function runAllCalculations() {
+        const invInput = document.getElementById('investment');
+        const strikeInput = document.getElementById('strike-pct');
+        const knockinInput = document.getElementById('knockin-pct');
+        const couponInput = document.getElementById('coupon-rate');
+        const periodSelect = document.getElementById('period');
+        const startDateInput = document.getElementById('start-date');
+
+        const errInv = document.getElementById('err-investment');
+        const errStrike = document.getElementById('err-strike');
+        const errKnockin = document.getElementById('err-knockin');
+        const errCoupon = document.getElementById('err-coupon');
+
+        let principal = parseFloat(invInput.value) || 0;
+        let strikePct = parseFloat(strikeInput.value) || 0;
+        let knockinPct = parseFloat(knockinInput.value) || 0;
+        let couponRate = parseFloat(couponInput.value) || 0;
+        let months = parseInt(periodSelect.value) || 1;
+        let startDateValue = startDateInput.value;
+
+        let hasError = false;
+        if (principal < 0) { errInv.style.display = 'block'; hasError = true; } else { errInv.style.display = 'none'; }
+        if (strikePct < 0 || strikePct > 100) { errStrike.style.display = 'block'; hasError = true; } else { errStrike.style.display = 'none'; }
+        if (knockinPct < 0 || knockinPct > 100) { errKnockin.style.display = 'block'; hasError = true; } else { errKnockin.style.display = 'none'; }
+        if (couponRate < 0 || couponRate > 100) { errCoupon.style.display = 'block'; hasError = true; } else { errCoupon.style.display = 'none'; }
+
+        for (let id = 1; id <= 5; id++) { renderTickerCardsOnly(id); }
+        syncDiagramReferences();
+
+        if (hasError) return;
+
+        let monthlyInterest = (principal * (couponRate / 100)) / 12;
+        let totalAccumulatedInterest = monthlyInterest * months;
+
+        document.getElementById('out-monthly-interest').innerText = formatCurrency(monthlyInterest);
+        document.getElementById('out-total-interest').innerText = formatCurrency(totalAccumulatedInterest);
+        document.getElementById('out-return-principal').innerText = formatCurrency(principal);
+
+        document.getElementById('diag-start-title').innerText = "進場時間：" + (startDateValue || "未選取");
+        document.getElementById('diag-end-title').innerText = "期滿時間：" + calculateFutureMonthStr(startDateValue, months);
+        document.getElementById('diag-val-principal').innerText = "NT$ " + Math.round(principal).toLocaleString('zh-TW');
+        document.getElementById('diag-val-interest').innerText = "NT$ " + Math.round(monthlyInterest).toLocaleString('zh-TW');
+
+        // 重新繪製明細表 (納入逐月自訂出場比率說明)
+        const tbody = document.getElementById('table-body');
+        tbody.innerHTML = '';
+        let progressiveInterest = 0;
+        for (let m = 1; m <= months; m++) {
+            progressiveInterest += monthlyInterest;
+            const tr = document.createElement('tr');
+
+            const tdMonth = document.createElement('td');
+            let fullDateStr = calculateFutureMonthStr(startDateValue, m);
+            tdMonth.innerHTML = `<strong>${fullDateStr ? fullDateStr.substring(0,7).replace('-',' 年 ') + ' 月' : '第 ' + m + ' 個月'}</strong>`;
+            tr.appendChild(tdMonth);
+
+            const tdMonthly = document.createElement('td');
+            tdMonthly.innerText = formatCurrency(monthlyInterest);
+            tdMonthly.style.color = '#059669'; tdMonthly.style.fontWeight = 'bold';
+            tr.appendChild(tdMonthly);
+
+            const tdAccum = document.createElement('td');
+            tdAccum.innerText = formatCurrency(progressiveInterest);
+            tdAccum.style.color = '#0f4c81'; tdAccum.style.fontWeight = 'bold';
+            tr.appendChild(tdAccum);
+
+            const tdCond = document.createElement('td');
+            tdCond.style.textAlign = 'left'; tdCond.style.paddingLeft = '20px';
+            const mOutPct = getStrikeOutPctForMonth(m);
             
-            <!-- 卡片 4: FCN產品組合檢索系統 (新) -->
-            <a href="https://script.google.com/macros/s/AKfycbxN5hy0Zk-RDhnUlbHT6huUR_u0ZofxTPrHJ-SZL1ERjwm34WDCqhk7h3ySF4q8uSzRDg/exec" target="_blank" class="glass-card p-8 rounded-3xl flex flex-col justify-between group">
-                <div>
-                    <div class="w-14 h-14 rounded-2xl bg-yellow-600/10 border border-yellow-500/20 flex items-center justify-center text-yellow-500 mb-6 group-hover:scale-110 transition-transform duration-300">
-                        <i data-lucide="search-code" class="w-7 h-7"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-white mb-3 group-hover:text-yellow-500 transition-colors">FCN 產品組合檢索系統</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed font-light">進入後台資料檢索系統，快速查詢與管理不同的連結票據組合、存續條件以及產品狀態。</p>
-                </div>
-                <div class="mt-8 flex items-center text-xs font-semibold text-yellow-500 tracking-wider uppercase group-hover:translate-x-1 transition-transform">
-                    進入系統 <i data-lucide="arrow-up-right" class="w-4 h-4 ml-1"></i>
-                </div>
-            </a>
-            
-            <!-- 卡片 5: FCN試算工具 -->
-            <a href="javascript:void(0)" onclick="openFcnCalculator()" class="glass-card p-8 rounded-3xl flex flex-col justify-between group cursor-pointer">
-                <div>
-                    <div class="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-6 group-hover:scale-110 transition-transform duration-300">
-                        <i data-lucide="trending-up" class="w-7 h-7"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-white mb-3 group-hover:text-amber-400 transition-colors">FCN 連結票據試算工具</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed font-light">結構型商品專用試算。精準分析執行價與敲入價（Knock-in）情境。</p>
-                </div>
-                <div class="mt-8 flex items-center text-xs font-semibold text-amber-400 tracking-wider uppercase group-hover:translate-x-1 transition-transform">
-                    前往試算 <i data-lucide="arrow-up-right" class="w-4 h-4 ml-1"></i>
-                </div>
-            </a>
-            <!-- 卡片 6: FCN資料庫檢索工具 -->
-            <a href="javascript:void(0)" onclick="openFcnDatasearch()" class="glass-card p-8 rounded-3xl flex flex-col justify-between group cursor-pointer">
-                <div>
-                <div class="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-6 group-hover:scale-110 transition-transform duration-300">
-            <i data-lucide="database" class="w-7 h-7"></i>
-        </div>
-        <h3 class="text-xl font-bold text-white mb-3 group-hover:text-amber-400 transition-colors">FCN 客戶下單資料檢索</h3>
-        <p class="text-slate-400 text-sm leading-relaxed font-light">結構型商品下單檢索。精準查詢您的投資本金、年化票息與標的狀態。</p>
-                </div>
-                <div class="mt-8 flex items-center text-xs font-semibold text-amber-400 tracking-wider uppercase group-hover:translate-x-1 transition-transform">
-        進入檢索 <i data-lucide="arrow-up-right" class="w-4 h-4 ml-1"></i>
-                </div>
-            </a>
-
-            <!-- 卡片 6: 債券投資報酬率 -->
-            <a href="https://b89tiger009.github.io/-BondcalculatorV2/" target="_blank" class="glass-card p-8 rounded-3xl flex flex-col justify-between group">
-                <div>
-                    <div class="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-6 group-hover:scale-110 transition-transform duration-300">
-                        <i data-lucide="landmark" class="w-7 h-7"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-white mb-3 group-hover:text-blue-400 transition-colors">債券投資報酬率試算</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed font-light">一鍵試算到期殖利率（YTM）與當期殖利率，協助穩健型資金配置。</p>
-                </div>
-                <div class="mt-8 flex items-center text-xs font-semibold text-blue-400 tracking-wider uppercase group-hover:translate-x-1 transition-transform">
-                    前往試算 <i data-lucide="arrow-up-right" class="w-4 h-4 ml-1"></i>
-                </div>
-            </a>
-
-            <!-- 卡片 7: 複利計算機 -->
-            <a href="https://b89tiger009.github.io/Compound_interest/" target="_blank" class="glass-card p-8 rounded-3xl flex flex-col justify-between group">
-                <div>
-                    <div class="w-14 h-14 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 mb-6 group-hover:scale-110 transition-transform duration-300">
-                        <i data-lucide="line-chart" class="w-7 h-7"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-white mb-3 group-hover:text-teal-400 transition-colors">複利計算機</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed font-light">規劃長期投資計畫。輕鬆模擬單利與複利效應，預估資產隨時間滾動的終值。</p>
-                </div>
-                <div class="mt-8 flex items-center text-xs font-semibold text-teal-400 tracking-wider uppercase group-hover:translate-x-1 transition-transform">
-                    前往試算 <i data-lucide="arrow-up-right" class="w-4 h-4 ml-1"></i>
-                </div>
-            </a>
-
-            <!-- 卡片 8: 貸款還款試算 -->
-            <a href="https://b89tiger009.github.io/loan_calculator/" target="_blank" class="glass-card p-8 rounded-3xl flex flex-col justify-between group">
-                <div>
-                    <div class="w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400 mb-6 group-hover:scale-110 transition-transform duration-300">
-                        <i data-lucide="percent" class="w-7 h-7"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-white mb-3 group-hover:text-orange-400 transition-colors">貸款還款試算</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed font-light">支援本息均攤、本金均攤等模式，精確估算各期應還本金、利息與每月支出負擔。</p>
-                </div>
-                <div class="mt-8 flex items-center text-xs font-semibold text-orange-400 tracking-wider uppercase group-hover:translate-x-1 transition-transform">
-                    前往試算 <i data-lucide="arrow-up-right" class="w-4 h-4 ml-1"></i>
-                </div>
-            </a>
-
-            <!-- 卡片 9: 減額繳清保險金額估算 -->
-            <a href="https://b89tiger009.github.io/Reduced_Paid-up/" target="_blank" class="glass-card p-8 rounded-3xl flex flex-col justify-between group">
-                <div>
-                    <div class="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mb-6 group-hover:scale-110 transition-transform duration-300">
-                        <i data-lucide="calculator" class="w-7 h-7"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-white mb-3 group-hover:text-cyan-400 transition-colors">減額繳清保險金額估算</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed font-light">協助評估在調整保費支出時，保單轉為減額繳清後的全新保障額度模擬。</p>
-                </div>
-                <div class="mt-8 flex items-center text-xs font-semibold text-cyan-400 tracking-wider uppercase group-hover:translate-x-1 transition-transform">
-                    前往試算 <i data-lucide="arrow-up-right" class="w-4 h-4 ml-1"></i>
-                </div>
-            </a>
-
-            <!-- 卡片 10: 保險需求評估中心 -->
-            <a href="https://b89tiger009.github.io/Insurance_assessment/" target="_blank" class="glass-card p-8 rounded-3xl flex flex-col justify-between group">
-                <div>
-                    <div class="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mb-6 group-hover:scale-110 transition-transform duration-300">
-                        <i data-lucide="file-heart" class="w-7 h-7"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-white mb-3 group-hover:text-rose-400 transition-colors">保險需求評估中心</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed font-light">全方位檢視人身與家庭風險缺口，量化壽險、醫療及失能保障的實際需求。</p>
-                </div>
-                <div class="mt-8 flex items-center text-xs font-semibold text-rose-400 tracking-wider uppercase group-hover:translate-x-1 transition-transform">
-                    前往評估 <i data-lucide="arrow-up-right" class="w-4 h-4 ml-1"></i>
-                </div>
-            </a>
-
-            <!-- 卡片 11: 投資屬性評估 -->
-            <a href="https://b89tiger009.github.io/invest/" target="_blank" class="glass-card p-8 rounded-3xl flex flex-col justify-between group">
-                <div>
-                    <div class="w-14 h-14 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-6 group-hover:scale-110 transition-transform duration-300">
-                        <i data-lucide="pie-chart" class="w-7 h-7"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-white mb-3 group-hover:text-purple-400 transition-colors">投資屬性與抗風險能力評估</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed font-light">透過科學化問卷釐清個人心理耐受度，媒合最適化投資與防禦策略。</p>
-                </div>
-                <div class="mt-8 flex items-center text-xs font-semibold text-purple-400 tracking-wider uppercase group-hover:translate-x-1 transition-transform">
-                    開始評估 <i data-lucide="arrow-up-right" class="w-4 h-4 ml-1"></i>
-                </div>
-            </a>
-
-        </div>
-    </main>
-
-    <footer class="text-center py-8 text-xs text-slate-600 font-light border-t border-white/5 bg-black/20">
-        &copy; 2026 金融理財工具箱. All Rights Reserved.
-    </footer>
-
-    <!-- Firebase 模組初始化 -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyDk0YQqdAVrYPsZGYtjhXDuSRZWwiLiAvA",
-            authDomain: "financial-management-too-1c520.firebaseapp.com",
-            projectId: "financial-management-too-1c520",
-            storageBucket: "financial-management-too-1c520.firebasestorage.app",
-            messagingSenderId: "20879141093",
-            appId: "1:20879141093:web:34b79c37f2afb534b1cc0c",
-            measurementId: "G-1PJS62TNL2"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
-        const auth = getAuth(app);
-
-        // 監聽登入狀態改變
-        onAuthStateChanged(auth, (user) => {
-            const loginSection = document.getElementById('login-section');
-            const toolsSection = document.getElementById('tools-section');
-            const logoutSection = document.getElementById('logout-section');
-            const welcomeMsg = document.getElementById('welcome-msg');
-
-            if (user) {
-                loginSection.style.display = 'none';
-                toolsSection.style.display = 'grid';
-                logoutSection.style.display = 'block';
-                welcomeMsg.innerText = `歡迎回來，${user.email}。請選擇您想使用的理財工具：`;
+            if (m === 1) {
+                tdCond.innerHTML = `<span class="badge badge-guaranteed">保證領息 (必定獲得) ｜ 出場比率: ${mOutPct}%</span>`;
+            } else if (m < months) {
+                tdCond.innerHTML = `<span class="badge badge-conditional">標的未漲破參考價 ｜ 出場比率: ${mOutPct}%</span>`;
             } else {
-                loginSection.style.display = 'block';
-                toolsSection.style.display = 'none';
-                logoutSection.style.display = 'none';
-                welcomeMsg.innerText = `本平台僅限授權使用者存取，請輸入帳號密碼以解鎖工具。`;
+                tdCond.innerHTML = `<div class="badge badge-final">1. 標的未漲破參考價 (出場比率: ${mOutPct}%)<br>或<br>2. 跌破執行價承接股票</div>`;
             }
-            lucide.createIcons();
-        });
+            tr.appendChild(tdCond);
+            tbody.appendChild(tr);
+        }
+    }
 
-        // 處理帳號密碼登入
-        window.handleLogin = function() {
-            const emailVal = document.getElementById('email').value;
-            const passwordVal = document.getElementById('password').value;
-            const statusMsg = document.getElementById('status-msg');
-            
-            if(!emailVal || !passwordVal) {
-                statusMsg.innerText = "❌ 請輸入帳號與密碼";
-                statusMsg.style.color = "#f87171";
-                return;
-            }
-
-            statusMsg.innerText = "⚡ 驗證中...";
-            statusMsg.style.color = "#60a5fa";
-
-            signInWithEmailAndPassword(auth, emailVal, passwordVal)
-                .then((userCredential) => {
-                    statusMsg.innerText = "";
-                })
-                .catch((error) => {
-                    let friendlyMessage = "❌ 登入失敗：請確認帳號或密碼是否正確";
-                    if (error.code === 'auth/invalid-credential') {
-                        friendlyMessage = "❌ 帳號或密碼錯誤，請重新輸入";
-                    }
-                    statusMsg.innerText = friendlyMessage;
-                    statusMsg.style.color = "#f87171";
-                });
+    // 將包含逐月遞減的完整19項數據直連上傳到 Google Apps Script 後端
+    async function saveDirectToSpreadsheet() {
+        const GAS_DEPLOY_URL = "https://script.google.com/macros/s/【請貼上您的GAS網頁應用程式密鑰】/exec";
+        
+        if (GAS_DEPLOY_URL.includes("【請貼上")) {
+            alert("請先將網頁原始碼最下方的 GAS_DEPLOY_URL 替換為您在 Google Apps Script 部署完成的網頁應用程式 URL！");
+            return;
         }
 
-        // 處理登出
-        window.handleLogout = function() {
-            signOut(auth).then(() => {
-                document.getElementById('status-msg').innerText = "";
-                document.getElementById('email').value = "";
-                document.getElementById('password').value = "";
+        const urlParams = new URLSearchParams();
+        urlParams.append("currentUserEmail", currentUserEmail);
+        urlParams.append("customerName", document.getElementById('customer-name').value);
+        urlParams.append("startDate", document.getElementById('start-date').value);
+        urlParams.append("investment", document.getElementById('investment').value);
+        urlParams.append("couponRate", document.getElementById('coupon-rate').value);
+        urlParams.append("period", document.getElementById('period').value);
+        urlParams.append("strikePct", document.getElementById('strike-pct').value);
+        urlParams.append("knockinPct", document.getElementById('knockin-pct').value);
+        
+        // 封裝出場價比例資訊 (若勾選遞減，將各月份陣列以斜線串接為字串一併存入該欄位，便於資料表閱讀)
+        const isChecked = document.getElementById('enable-step-down').checked;
+        if (isChecked) {
+            let months = parseInt(document.getElementById('period').value) || 1;
+            let arr = [];
+            for(let k=1; k<=months; k++) { arr.push(getStrikeOutPctForMonth(k) + "%"); }
+            urlParams.append("triggerOutPct", "階梯遞減: " + arr.join(" / "));
+        } else {
+            urlParams.append("triggerOutPct", document.getElementById('trigger-out-pct').value + "%");
+        }
+        
+        for (let i = 1; i <= 5; i++) {
+            urlParams.append(`t${i}_symbol`, document.getElementById(`t${i}`).value);
+            urlParams.append(`t${i}_ref`, document.getElementById(`t${i}-ref`).value);
+        }
+
+        try {
+            await fetch(GAS_DEPLOY_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: urlParams
             });
+            alert(`🎉 直連儲存成功！\n\n客戶名稱：${document.getElementById('customer-name').value}\n操作者：${currentUserEmail}\n數據已成功傳輸寫入您的 Google 雲端試算表中。`);
+        } catch (error) {
+            alert("❌ 雲端直連儲存失敗，請檢查網路或 GAS_DEPLOY_URL 設定！");
         }
-        // 【入口網站端 - FCN 安全傳參開起試算函式】
-        window.openFcnCalculator = function() {
-            var userEmail = "";
-            // 使用 Firebase v10 的 auth 物件取得目前登入使用者 Email
-            if (auth.currentUser) {
-                userEmail = auth.currentUser.email; 
-            } else {
-                userEmail = "guest@example.com";
-            }
-            
-            // 將 FCN 試算網頁的網址強設定帶入 ?user= 參數
-            var fcnUrl = "https://b89tiger009.github.io/FCNcalculatorV2/?user=" + encodeURIComponent(userEmail);
-            
-            // 開啟新分頁
-            window.open(fcnUrl, "_blank");
-        }        
-        // 【入口網站端 - FCN 安全傳參開起試算函式】
-        window.openFcnDatasearch = function() {
-            var userEmail = "";
-            // 使用 Firebase v10 的 auth 物件取得目前登入使用者 Email
-            if (auth.currentUser) {
-                userEmail = auth.currentUser.email; 
-            } else {
-                userEmail = "guest@example.com";
-            }
-   
-            // 將 FCN 資料檢索網頁的網址強設定帶入 ?user= 參數
-            var fcnUrl = "https://b89tiger009.github.io/FCNdatasearch/index.html?user=" + encodeURIComponent(userEmail);
-            
-            // 開啟新分頁
-            window.open(fcnUrl, "_blank");
-        }            
-    </script>
+    }
 
-    <script>
-        lucide.createIcons();
-    </script>
+    window.onload = function() {
+        getFirebaseUser(); 
+        toggleStepDownPanel();
+        for (let id = 1; id <= 5; id++) { updateTickerInfo(id); }
+        runAllCalculations();
+    };
+</script>
+
 </body>
 </html>
